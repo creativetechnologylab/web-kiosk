@@ -1,7 +1,7 @@
 html, body {
     margin: 0;
     padding: 0;
-    background: #fff071;
+    background: #000;
 }
 
 html, body, webview {
@@ -24,4 +24,16 @@ html, body, webview {
 
 #alert h1, #alert p {
     margin: 0;
+}
+
+.error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgb(236, 173, 173);
+    color: black;
+    font-family: monospace;
+    font-size: 30px;
 }
