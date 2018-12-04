@@ -1,7 +1,11 @@
+* {
+    box-sizing: border-box;
+}
+
 html, body {
     margin: 0;
     padding: 0;
-    background: #000;
+    background: #fff;
 }
 
 html, body, webview {
@@ -26,14 +30,26 @@ html, body, webview {
     margin: 0;
 }
 
-.error {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgb(236, 173, 173);
-    color: black;
-    font-family: monospace;
-    font-size: 30px;
+.urlPopup {
+    position: absolute;
+
+    top: 50%;
+    left: 50%;
+
+    width: 95%;
+    max-width: 350px;
+    
+    padding: 10px;
+    border-radius: 2px;
+
+    background-color: white;
+    box-shadow: 3px 3px 0px 0px rgba(255, 0, 0, 0.8);
+
+    transform: translate3d(-50%, -50%, 0);
+}
+
+.urlPopup input {
+    width: 100%;
+
+    padding: 10px;
 }

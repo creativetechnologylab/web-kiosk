@@ -20,7 +20,7 @@ function createWindow () {
     mainWindow = new BrowserWindow( {
         width: 640,
         height: 480,
-        backgroundColor: '#000',
+        backgroundColor: '#fff',
         kiosk: true
     } )
 
@@ -30,7 +30,7 @@ function createWindow () {
         slashes: true
     } ) );
 
-    // mainWindow.webContents.openDevTools()
+    mainWindow.webContents.openDevTools()
 
     mainWindow.urlTarget = urlTarget;
 
