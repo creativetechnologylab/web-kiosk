@@ -13,43 +13,48 @@ html, body, webview {
     height: 100%;
 }
 
-#alert {
-    background: white;
-    box-shadow: 0px 0px 10px rgba( 0, 0, 0, 0.5 );
-    padding: 1em;
-    font-family: sans-serif;
-    display: block;
-    width: 400px;
-    top: 1em;
-    left: 1em;
-    position: absolute;
-    display: none;
+.url-popup {
+  position: absolute;
+
+  top: 50%;
+  left: 50%;
+
+  width: 100%;
+  max-width: 400px;
+
+  transform: translate3d(-50%, calc(-50% + 20px), 0);
+
+  font-family: sans-serif;
+
+  border-radius: 2px;
+
+  background-color: white;
+
+  box-shadow: 0 1px 8px -2px;
+
+  visibility: hidden;
+  opacity: 0;
+
+  transition-duration: .35s;
+  transition-property: transform, opacity, visibility;
 }
 
-#alert h1, #alert p {
-    margin: 0;
+.show .url-popup {
+  opacity: 1;
+  visibility: visible;
+  transform: translate3d(-50%, -50%, 0);
 }
 
-.urlPopup {
-    position: absolute;
+label {
+  display: block;
 
-    top: 50%;
-    left: 50%;
-
-    width: 95%;
-    max-width: 350px;
-    
-    padding: 10px;
-    border-radius: 2px;
-
-    background-color: white;
-    box-shadow: 3px 3px 0px 0px rgba(255, 0, 0, 0.8);
-
-    transform: translate3d(-50%, -50%, 0);
+  padding: 10px;
 }
 
-.urlPopup input {
-    width: 100%;
+label input[type="text"] {
+  display: block;
 
-    padding: 10px;
+  width: 100%;
+
+  padding: 10px;
 }

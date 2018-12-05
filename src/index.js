@@ -18,10 +18,10 @@ if (fs.existsSync(displayTxtFile)) {
 
 function createWindow () {
     mainWindow = new BrowserWindow( {
-        width: 640,
-        height: 480,
+        width: 1080,
+        height: 720,
         backgroundColor: '#fff',
-        kiosk: true
+        // kiosk: true
     } )
 
     mainWindow.loadURL( url.format( {
@@ -54,3 +54,7 @@ app.on( 'activate', function () {
 app.on( 'browser-window-blur', function() {
     // app.focus();
 } )
+
+electron.ipcMain.on('message', (event, arg) => {
+  console.log('Child message:', arg);
+});
