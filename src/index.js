@@ -21,7 +21,7 @@ function createWindow () {
         width: 1080,
         height: 720,
         backgroundColor: '#fff',
-        // kiosk: true
+        kiosk: true
     } )
 
     mainWindow.loadURL( url.format( {
@@ -30,7 +30,7 @@ function createWindow () {
         slashes: true
     } ) );
 
-    mainWindow.webContents.openDevTools()
+    // mainWindow.webContents.openDevTools()
 
     mainWindow.urlTarget = urlTarget;
 
@@ -52,7 +52,7 @@ app.on( 'activate', function () {
 } )
 
 app.on( 'browser-window-blur', function() {
-    // app.focus();
+    app.focus();
 } )
 
 electron.ipcMain.on('message', (event, arg) => {
