@@ -18,7 +18,9 @@ const CLASSES = {
 const KEYS = {
   URL: 'url',
   PERSIST: 'persist',
-  port: 'port'
+  port: 'port',
+  PERSISTED: 'persisted',
+  PERSISTEDPORT: 'persistedport',
 };
 
 class pretendParent {
@@ -56,20 +58,34 @@ class URLManager {
 
     this.burn = {};
     this.standardPort = 3000;
+    this.port = localStorage.getItem(KEYS.PERSISTEDPORT) || this.standardPort;
   }
 
   init() {
     this.addGlobalListeners();
 
-    if (!this.hasLocalTarget()) {
+    const target = this.getLocalTarget();
+
+    if (!target) {
       this.mountPopup();
+    } else {
+      this.runTarget(target);
     }
   }
 
   addGlobalListeners() {
     document.addEventListener('keyup', (e) => {
       if (e.keyCode === 192 && e.shiftKey && !this.isMounted) {
-        this.iterateOverride();
+        this.iterateOverride(() => {
+          this.mountPopup();
+        });
+      }
+
+      if (e.keyCode === 84 && e.shiftKey) {
+        this.iterateOverride(() => {
+          this.kill();
+          this.options.parentComms.send('kill', 'true');
+        });
       }
     }, false);
 
@@ -83,7 +99,7 @@ class URLManager {
     });
   }
 
-  iterateOverride() {
+  iterateOverride(cb) {
     clearTimeout(this.overrideTimer);
     this.overrideTimer = setTimeout(() => {
       this.resetOverrideTimer()
@@ -92,7 +108,7 @@ class URLManager {
     this.override++;
 
     if (this.override > 5) {
-      this.mountPopup();
+      cb();
     }
   }
 
@@ -101,8 +117,14 @@ class URLManager {
     this.override = 0;
   }
 
-  hasLocalTarget() {
-    return false;
+  getLocalTarget() {
+    let local = localStorage.getItem(KEYS.PERSISTED);
+
+    if (!local) {
+      return false;
+    }
+
+    return JSON.parse(local);
   }
 
   /**
@@ -195,16 +217,18 @@ class URLManager {
   }
 
   unmountPopup() {
-    this.isMounted = false;
+    if (this.isMounted) {
+      this.isMounted = false;
 
-    this.removeEventListeners();
+      this.removeEventListeners();
 
-    this.options.mount.classList.toggle(CLASSES.SHOW, false);
+      this.options.mount.classList.toggle(CLASSES.SHOW, false);
 
-    setTimeout(() => {
-      const el = this.options.mount.querySelector(`.${CLASSES.WRAPPER}`);
-      el.parentElement.removeChild(el);
-    }, 500);
+      setTimeout(() => {
+        const el = this.options.mount.querySelector(`.${CLASSES.WRAPPER}`);
+        el.parentElement.removeChild(el);
+      }, 500);
+    }
   }
 
   cleanup() {
@@ -249,6 +273,14 @@ class URLManager {
     if (urlInfo.error) {
       this.displayError(urlInfo);
     } else {
+      if (this.persist) {
+        localStorage.setItem(KEYS.PERSISTED, JSON.stringify(urlInfo));
+        localStorage.setItem(KEYS.PERSISTEDPORT, this.port);
+      } else {
+        localStorage.setItem(KEYS.PERSISTED, false);
+        localStorage.setItem(KEYS.PERSISTEDPORT, this.standardPort);
+      }
+
       this.runTarget(urlInfo);
     }
   }

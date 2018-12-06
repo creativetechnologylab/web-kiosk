@@ -58,3 +58,7 @@ app.on( 'browser-window-blur', function() {
 electron.ipcMain.on('message', (event, arg) => {
   console.log('Child message:', arg);
 });
+
+electron.ipcMain.on('kill', (event, arg) => {
+  app.quit();
+});
