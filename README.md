@@ -22,8 +22,8 @@ The interactions within the app are purposefully _hard_ because they are meant t
 
 The commands are:
 
-- **shift + `** Press this multiple times very quickly, to get the popup to appear again
-- **shift + t** An alternative way to quit (in case cmd + q was tied up for some reason)
+- **shift + `** Press this multiple times very quickly. Gets the popup to appear again
+- **shift + t** Press this multiple times very quickly. An alternative way to quit (in case cmd + q was tied up for some reason)
 - **cmd + q** Quit the app
 
 ## How to run from start up
