@@ -45,13 +45,15 @@ html, body, webview {
   transform: translate3d(-50%, -50%, 0);
 }
 
-label {
+label,
+.fake-label {
   display: block;
 
   padding: 10px;
 }
 
-label input[type="text"] {
+label input[type="text"],
+.fake-label input[type="text"] {
   display: block;
 
   width: 100%;

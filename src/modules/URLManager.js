@@ -6,7 +6,7 @@ const isValidPath = require('is-valid-path');
 const connect = require('connect');
 const serveStatic = require('serve-static');
 const fork = require('child_process').fork;
-
+const { dialog } = require('electron').remote;
 
 const utils = require('./utils.js');
 
@@ -23,6 +23,8 @@ const KEYS = {
   PERSISTEDPORT: 'persistedport',
 };
 
+// This is a fake communicator to mirror
+// the ideas of the ipc communication
 class pretendParent {
   send(key, message) {
     console.log(key, message);
@@ -36,27 +38,46 @@ class pretendParent {
 class URLManager {
   constructor(browser, options = {}) {
     this.defaults = {
+      // Where to mount the popup when created
       mount: document.body,
+
+      // The communicator, usually overriden to be the ipc communication
       parentComms: pretendParent
     };
 
     this.options = Object.assign({}, this.defaults, options);
 
+    // The webview to project the projects into
     this.browser = browser;
 
+    // Bind the functions for the popup
     this.onSubmit = this.onSubmit.bind(this);
+    this.onFileChoose = this.onFileChoose.bind(this);
 
+    // The various parameters involved with 
+    // mounting a particular project
     this.base = {
       url: false,
       static: true,
       path: false,
       runtime: 'static'
     };
+
+    // A small helper to track whether popup 
+    // is mounted or not
     this.isMounted = false;
 
+    // A variable needed to track override iterations
+    // when trying to remount the popup
     this.override = 0;
 
+    // Brute force object, to trigger garbage 
+    // collection of projects when switching
+    // targets
     this.burn = {};
+
+    // Handling which ports to use when serving
+    // local content
     this.standardPort = 3000;
     this.port = localStorage.getItem(KEYS.PERSISTEDPORT) || this.standardPort;
   }
@@ -64,6 +85,8 @@ class URLManager {
   init() {
     this.addGlobalListeners();
 
+    // Determines whether there is already a
+    // mounted target
     const target = this.getLocalTarget();
 
     if (!target) {
@@ -75,12 +98,14 @@ class URLManager {
 
   addGlobalListeners() {
     document.addEventListener('keyup', (e) => {
+      // 192 is the backtick - `
       if (e.keyCode === 192 && e.shiftKey && !this.isMounted) {
         this.iterateOverride(() => {
           this.mountPopup();
         });
       }
 
+      // 84 is 't'
       if (e.keyCode === 84 && e.shiftKey) {
         this.iterateOverride(() => {
           this.kill();
@@ -89,7 +114,7 @@ class URLManager {
       }
     }, false);
 
-
+    // Try kill any processes if exiting
     window.addEventListener('unload', () => {
       this.cleanup();
     }, false);
@@ -99,6 +124,16 @@ class URLManager {
     });
   }
 
+  /**
+   * Helper method to not trigger popup
+   * until certain amount of presses have
+   * occured.
+   * 
+   * Supplied callback is run when the override
+   * has been beaten
+   * 
+   * @param {Function} cb 
+   */
   iterateOverride(cb) {
     clearTimeout(this.overrideTimer);
     this.overrideTimer = setTimeout(() => {
@@ -112,11 +147,19 @@ class URLManager {
     }
   }
 
+  /**
+   * Reverses the effects of the override
+   * timer, back to default
+   */
   resetOverrideTimer() {
     clearTimeout(this.overrideTimer);
     this.override = 0;
   }
 
+  /**
+   * Tries to get the stored target from local
+   * storage API
+   */
   getLocalTarget() {
     let local = localStorage.getItem(KEYS.PERSISTED);
 
@@ -139,20 +182,28 @@ class URLManager {
 
     const form = document.createElement('FORM');
     const labels = [
-      document.createElement('LABEL'),
+      document.createElement('DIV'),
       document.createElement('LABEL'),
       document.createElement('LABEL'),
       document.createElement('LABEL'),
     ];
+
+    labels[0].classList.add('fake-label');
 
     const input = document.createElement('INPUT');
     utils.setAttributes(input, {
       name: KEYS.URL,
       type: 'text',
       placeholder: 'Enter URL or drag file/folder',
-      required: true
+      required: true,
+      id: 'file-choice'
     });
     labels[0].appendChild(input);
+
+    const fileChoose = document.createElement('BUTTON');
+    fileChoose.innerText = "Choose file"
+    fileChoose.id = 'fileChoose';
+    labels[0].appendChild(fileChoose);
 
     const portInput = document.createElement('INPUT');
     utils.setAttributes(portInput, {
@@ -192,11 +243,16 @@ class URLManager {
     };
   }
 
+  /**
+   * Mounts the popup, respecting of if
+   * it has been already mounted in the past
+   */
   mountPopup() {
     this.cleanup();
 
     this.isMounted = true;
 
+    // Lazily creates the pop up form
     if (!this.popupEl) {
       const { popupEl, formEl } = this.createPopupEl();
       this.popupEl = popupEl;
@@ -231,6 +287,13 @@ class URLManager {
     }
   }
 
+  /**
+   * Trigger garbage collection for the 
+   * current target running.
+   * 
+   * Also a place to do any more special 
+   * 'killing' of processes
+   */
   cleanup() {
     if (this.burn.server) {
       this.burn.server.close();
@@ -245,10 +308,12 @@ class URLManager {
 
   addEventListeners() {
     this.formEl.addEventListener('submit', this.onSubmit, false);
+    this.formEl.querySelector('#fileChoose').addEventListener('click', this.onFileChoose, false);
   }
 
   removeEventListeners() {
     this.formEl.removeEventListener('submit', this.onSubmit);
+    this.formEl.querySelector('#fileChoose').removeEventListener('click', this.onFileChoose);
   }
 
   onSubmit(e) {
@@ -258,6 +323,28 @@ class URLManager {
     this.processForm(formData);
   }
 
+  onFileChoose() {
+    dialog.showOpenDialog({
+      filters: [
+        { name: 'Files', extensions: ['html','js','json']}
+      ],
+      properties: ['openFile']
+    }, (filePaths) => {
+      if (filePaths && filePaths.length > 0) {
+        this.formEl.querySelector('#file-choice').value = filePaths[0];
+      }
+    });
+  }
+
+  /**
+   * Processes the pop up form data and
+   * creates the necessary keys using defaults
+   * where necessary
+   * 
+   * Also persists this information
+   * 
+   * @param {FormData} formData 
+   */
   processForm(formData) {
     this.url = formData.get(KEYS.URL);
     this.persist = formData.get(KEYS.PERSIST);
@@ -285,6 +372,11 @@ class URLManager {
     }
   }
 
+  /**
+   * Tries to make sense of the given URL
+   * 
+   * @param {String} url 
+   */
   getUrlInfo(url) {
     if (isURL(url)) {
       return Object.assign({}, this.base, {
@@ -298,7 +390,14 @@ class URLManager {
     }
   }
 
+  /**
+   * Further drills down into what the supplied
+   * file path actually is
+   * 
+   * @param {String} filepath 
+   */
   _parsePath(filepath) {
+    // Utility to expand terminal like path extensions
     let _filepath = utils.expandTilde(filepath);
 
     if (fs.existsSync(_filepath)) {
@@ -310,10 +409,19 @@ class URLManager {
         return this._parseFile(_filepath);
       }
     } else {
-      console.log('doesnt exist');
+      return this.createError('Given path doesnt exist');
     }
   }
 
+  /**
+   * If its a directory it tries to look
+   * for an entry point to use.
+   * 
+   * This isn't very efficient, but it can be
+   * handy
+   * 
+   * @param {String} filepath 
+   */
   _parseDirectory(filepath) {
     const files = fs.readdirSync(filepath);
 
@@ -332,6 +440,13 @@ class URLManager {
     return this._parseFile(path.join(filepath, target));
   }
 
+  /**
+   * Infers the runtime from the extension
+   * 
+   * Add extra runtimes at this section
+   * 
+   * @param {String} file 
+   */
   _parseFile(file) {
     const ext = path.extname(file);
 
@@ -339,7 +454,8 @@ class URLManager {
       case '.html':
         return Object.assign({}, this.base, {
           path: file,
-          directory: path.dirname(file)
+          directory: path.dirname(file),
+          runtime: 'static'
         });
       case '.js':
         return Object.assign({}, this.base, {
@@ -353,6 +469,11 @@ class URLManager {
     }
   }
 
+  /**
+   * Generalised way to create errors
+   * 
+   * @param {String} text 
+   */
   createError(text) {
     return {
       error: true,
@@ -364,19 +485,30 @@ class URLManager {
     console.error(error.text);
   }
 
+  /**
+   * Runs the actual target, setting up
+   * any external processes to do so
+   * 
+   * @param {Object} target 
+   */
   runTarget(target) {
     this.unmountPopup();
 
     switch (target.runtime) {
+      // Easy, just throws the path into the webview
       case 'webview':
         this.browser.src = target.path;
         return;
+
+      // Starts a server which just serves static content
       case 'static':
         this.burn.app = connect();
         this.burn.app.use(serveStatic(target.directory))
         this.burn.server = http.createServer(this.burn.app).listen(this.port, 'localhost', () => {
           this.browser.src = `http://localhost:${this.port}`;
         });
+
+      // Starts a node instance
       case 'js':
         this.burn.loaded = false;
         this.burn.child = fork(target.path, [], {
@@ -385,11 +517,14 @@ class URLManager {
         });
 
         this.burn.child.stdout.on('data', data => {
+          // Assumes that it is loaded when it first receives data
+          // Maybe not ideal
           if (!this.burn.loaded) {
             this.burn.loaded = true;
             this.browser.src = `http://localhost:${this.port}`;
           }
 
+          // Passes any messages up to the parent
           this.options.parentComms.send('message', data.toString());
         });
 

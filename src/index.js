@@ -16,27 +16,37 @@ if (fs.existsSync(displayTxtFile)) {
     urlTarget = fs.readFileSync(displayTxtFile);
 }
 
+function isDevelopment() {
+  return process.env.NODE_ENV === 'development';
+}
+
 function createWindow () {
-    mainWindow = new BrowserWindow( {
-        width: 1080,
-        height: 720,
-        backgroundColor: '#fff',
-        kiosk: true
-    } )
+  const isDev = isDevelopment();
 
-    mainWindow.loadURL( url.format( {
-        pathname: path.join( __dirname, `index.html` ),
-        protocol: 'file:',
-        slashes: true
-    } ) );
+  const options = {
+    width: 1080,
+    height: 720,
+    backgroundColor: '#fff',
+    kiosk: !isDev
+  }
 
-    // mainWindow.webContents.openDevTools()
+  mainWindow = new BrowserWindow(options);
 
-    mainWindow.urlTarget = urlTarget;
+  mainWindow.loadURL( url.format( {
+    pathname: path.join( __dirname, `index.html` ),
+    protocol: 'file:',
+    slashes: true
+  }));
 
-    mainWindow.on( 'closed', function () {
-        mainWindow = null
-    } )
+  if (isDev) {
+    mainWindow.webContents.openDevTools()
+  }
+
+  mainWindow.urlTarget = urlTarget;
+
+  mainWindow.on( 'closed', function () {
+    mainWindow = null
+  })
 }
 
 app.on( 'ready', createWindow)
@@ -51,9 +61,9 @@ app.on( 'activate', function () {
     }
 } )
 
-app.on( 'browser-window-blur', function() {
-    app.focus();
-} )
+// app.on( 'browser-window-blur', function() {
+//     app.focus();
+// } )
 
 electron.ipcMain.on('message', (event, arg) => {
   console.log('Child message:', arg);
