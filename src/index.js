@@ -12,6 +12,8 @@ let mainWindow;
 let displayTxtFile = path.join(homedir, 'Desktop', 'display.txt');
 let urlTarget;
 
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
 if (fs.existsSync(displayTxtFile)) {
     urlTarget = fs.readFileSync(displayTxtFile);
 }
